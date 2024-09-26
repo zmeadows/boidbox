@@ -1,1 +1,1 @@
-void testfn();
+void testfn(void);
