@@ -20,6 +20,12 @@ add_executable(boidbox
     main.c
     boid.h
     boid.c
+    led_panel.h
+    led_panel.c
+    streak.h
+    streak.c
+    utils.h
+    utils.c
     )
 
 target_link_libraries(boidbox librgbmatrix.a stdc++ rt m pthread)
