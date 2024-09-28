@@ -1,6 +1,7 @@
 #include "led_panel.h"
 
 #include "streak.h"
+#include "test.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -14,23 +15,7 @@ int main(void)
 
     struct LEDPanel panel = led_panel_create();
 
+    // return test_main(&panel);
     return streak_main(&panel);
-
-    /*
-    double x = 0;
-    double y = 0;
-
-    for (int i = 0; i < panel.width; ++i) {
-        int xp = ((int) x) & (panel.width - 1);
-        int yp = ((int) y) & (panel.height - 1);
-        // led_canvas_clear(canvas);
-        led_canvas_set_pixel(panel.canvas, xp, yp, 0, 0, 255);
-
-        led_panel_swap_canvas_vsync(&panel);
-        x += 1.;
-        y += 1;
-    }
-
-    */
 }
 

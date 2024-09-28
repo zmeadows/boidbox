@@ -26,6 +26,8 @@ add_executable(boidbox
     streak.c
     utils.h
     utils.c
+    test.h
+    test.c
     )
 
 target_link_libraries(boidbox librgbmatrix.a stdc++ rt m pthread)

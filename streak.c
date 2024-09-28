@@ -7,26 +7,16 @@
 #include <string.h>
 #include <unistd.h>
 
-// #define MAX_STREAK_LEN 10
 #define MAX_STREAK_COUNT 1500
 
 struct Streak {
     double x;
     double y;
-    double vx; // in pixel space
-    double vy; // in pixel space
+    double vx;
+    double vy;
     uint8_t r;
     uint8_t g;
     uint8_t b;
-
-    // struct {
-    //     int xp[MAX_STREAK_LEN];
-    //     int yp[MAX_STREAK_LEN];
-    //     uint8_t r[MAX_STREAK_LEN];
-    //     uint8_t g[MAX_STREAK_LEN];
-    //     uint8_t b[MAX_STREAK_LEN];
-    //     size_t len;
-    // } history;
 };
 
 static void streak_init(struct LEDPanel* panel, struct Streak* streak)
@@ -45,36 +35,39 @@ static void streak_init(struct LEDPanel* panel, struct Streak* streak)
     streak->b = rand() & 0xFF;
 }
 
+static void streak_update_(double* pos, double* vel, double max, double dt) 
+{
+    *pos += *vel * dt;
+    if (*pos < 0) {
+        *pos *= -1;
+        *vel *= -1;
+    } else if (*pos > max) {
+        *pos = 2*max - *pos;
+        *vel *= -1;
+    }
+}
+
 static void streak_update(struct Streak* streak, struct LEDPanel* panel)
 {
-    streak->x += streak->vx * panel->dt_frame;
-    if (streak->x < 0) {
-        streak->x *= -1;
-        streak->vx *= -1;
-    } else if (streak->x > panel->width) {
-        streak->x = 2*panel->width - streak->x;
-        streak->vx *= -1;
-    }
-
-    streak->y += streak->vy * panel->dt_frame;
-    if (streak->y < 0) {
-        streak->y *= -1;
-        streak->vy *= -1;
-    } else if (streak->y > panel->height) {
-        streak->y = 2*panel->height - streak->y;
-        streak->vy *= -1;
-    }
+    streak_update_(&streak->x, &streak->vx, panel->width, panel->dt_frame);
+    streak_update_(&streak->y, &streak->vy, panel->height, panel->dt_frame);
 }
 
 static void streak_draw(struct Streak* streak, struct LEDPanel* panel)
 {
     int xp = (int) streak->x;
     int yp = (int) streak->y;
-    led_canvas_set_pixel(panel->canvas, xp % panel->width, yp % panel->height, streak->r, streak->g, streak->b);
+
+    led_canvas_set_pixel(panel->canvas,
+                         xp % panel->width, yp % panel->height,
+                         streak->r, streak->g, streak->b);
 }
 
 int streak_main(struct LEDPanel* panel)
 {
+    struct FrameTimer timer;
+    frame_timer_init(&timer);
+
     size_t streak_count = 0;
     struct Streak streaks[MAX_STREAK_COUNT];
     memset(&streaks, 0, sizeof(streaks));
@@ -84,7 +77,7 @@ int streak_main(struct LEDPanel* panel)
     for (size_t istep = 0; istep < 20000; istep++) {
         led_canvas_clear(panel->canvas);
 
-        if (streak_count < MAX_STREAK_COUNT && random_uniform(0., 1.) < 0.05) {
+        if (streak_count < MAX_STREAK_COUNT && random_uniform(0., 1.) < 0.2) {
             streak_init(panel, &streaks[streak_count++]);
         }
 
@@ -94,9 +87,10 @@ int streak_main(struct LEDPanel* panel)
         }
 
         led_panel_swap_canvas_vsync(panel);
+        frame_timer_tick(&timer);
 
         if (istep % 32 == 0) {
-            fprintf(stderr, "streak count = %zu\r", streak_count);
+            fprintf(stderr, "streak count = %zu, fps = %lf\r", streak_count, timer.fps);
             fflush(stderr);
         }
     }

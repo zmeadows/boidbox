@@ -16,28 +16,24 @@ static void signal_handler(int /* signum */) {
 
 struct LEDPanel led_panel_create() 
 {
-    static bool already_created = false;
-
-    if (already_created) {
+    if (g_matrix != NULL) {
         fprintf(stderr, "Attempted to double initialize the LEDPanel\n");
         exit(EXIT_FAILURE);
     }
-
-    already_created = true;
 
     struct RGBLedMatrixOptions options;
     memset(&options, 0, sizeof(options));
     options.rows = 64;
     options.cols = 64;
     options.chain_length = 2;
-    options.brightness = 50;
-    options.limit_refresh_rate_hz = 175;
+    options.brightness = 75;
+    options.limit_refresh_rate_hz = 90;
     options.pixel_mapper_config = "Mirror:V";
     // options.show_refresh_rate = true;
 
     struct RGBLedRuntimeOptions rt_options;
     memset(&rt_options, 0, sizeof(rt_options));
-    rt_options.gpio_slowdown = 4;
+    rt_options.gpio_slowdown = 3;
 
     struct LEDPanel panel;
 
