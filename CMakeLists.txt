@@ -28,6 +28,8 @@ add_executable(boidbox
     utils.c
     test.h
     test.c
+    v2.h
+    v2.c
     )
 
 target_link_libraries(boidbox librgbmatrix.a stdc++ rt m pthread)

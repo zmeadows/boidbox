@@ -1,6 +1,7 @@
 #include "led_panel.h"
 
 #include "streak.h"
+#include "boid.h"
 #include "test.h"
 
 #include <stdio.h>
@@ -16,6 +17,7 @@ int main(void)
     struct LEDPanel panel = led_panel_create();
 
     // return test_main(&panel);
-    return streak_main(&panel);
+    // return streak_main(&panel);
+    return boids_main(&panel);
 }
 

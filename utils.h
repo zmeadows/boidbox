@@ -3,6 +3,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include "v2.h"
+
 double random_uniform(double min, double max);
 
 double clamp(double x, double min, double max);

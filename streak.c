@@ -23,7 +23,7 @@ static void streak_init(struct LEDPanel* panel, struct Streak* streak)
 {
     memset(streak, 0, sizeof(struct Streak));
 
-    led_panel_random_coordinate(panel, &streak->x, &streak->y);
+    led_panel_random_pos(panel, &streak->x, &streak->y);
 
     double vmag = random_uniform(10., 150.);
     double angle = random_uniform(0., M_PI);

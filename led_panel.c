@@ -1,8 +1,11 @@
 #include "led_panel.h"
 
+#include "utils.h"
+
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 static struct RGBLedMatrix* g_matrix = NULL;
 
@@ -61,13 +64,21 @@ struct LEDPanel led_panel_create()
 
     led_canvas_get_size(panel.canvas, &panel.width, &panel.height);
 
+    if (panel.width < 0 || panel.height < 0) {
+        fprintf(stderr, "Invalid LEDPanel width/height: %d/%d\n", panel.width, panel.height);
+        exit(EXIT_FAILURE);
+    }
+    
+    panel.uwidth = (size_t) panel.width;
+    panel.uheight = (size_t) panel.height;
+
     fprintf(stderr, "Size: %dx%d. Hardware gpio mapping: %s\n",
             panel.width, panel.height, options.hardware_mapping);
 
     return panel;
 }
 
-void led_panel_random_coordinate(struct LEDPanel* panel, double* x, double* y)
+void led_panel_random_pos(struct LEDPanel* panel, double* x, double* y)
 {
     double x_sf = 0.1 + (rand() / (double) RAND_MAX) * 0.8;
     double y_sf = 0.1 + (rand() / (double) RAND_MAX) * 0.8;
@@ -75,7 +86,24 @@ void led_panel_random_coordinate(struct LEDPanel* panel, double* x, double* y)
     *x = x_sf * panel->width;
     *y = y_sf * panel->height;
 }
+
+void led_panel_random_v2_pos(struct LEDPanel* panel, struct V2* v) {
+    led_panel_random_pos(panel, &v->x, &v->y);
+}
+
+void led_panel_random_v2_vel(struct LEDPanel* panel, struct V2* v) {
+    double vmag = random_uniform(1., (panel->width + panel->height));
+    double angle = random_uniform(0., M_PI);
+    v->x = vmag * cos(angle);
+    v->y = vmag * sin(angle);
+}
  
 void led_panel_swap_canvas_vsync(struct LEDPanel* panel) {
     panel->canvas = led_matrix_swap_on_vsync(panel->matrix, panel->canvas);
+}
+
+int led_panel_cell_index_row_major(struct LEDPanel* panel, struct V2* v) {
+    int row = (int) (v->y / panel->width);
+    int col = (int) (v->x);
+    return row * panel->width + col;
 }
