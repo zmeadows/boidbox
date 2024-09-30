@@ -71,6 +71,7 @@ struct LEDPanel led_panel_create()
     
     panel.uwidth = (size_t) panel.width;
     panel.uheight = (size_t) panel.height;
+    panel.npixels = panel.uwidth * panel.uheight;
 
     fprintf(stderr, "Size: %dx%d. Hardware gpio mapping: %s\n",
             panel.width, panel.height, options.hardware_mapping);

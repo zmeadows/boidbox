@@ -18,6 +18,10 @@ int main(void)
 
     // return test_main(&panel);
     // return streak_main(&panel);
-    return boids_main(&panel);
+    int retcode =  boids_main(&panel);
+
+    fprintf(stderr, "Finished with return code: %d\n", retcode);
+
+    return retcode;
 }
 

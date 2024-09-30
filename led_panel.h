@@ -11,6 +11,7 @@ struct LEDPanel {
     int height;
     size_t uwidth;
     size_t uheight;
+    size_t npixels;
     double refresh_rate_Hz;
     double dt_frame;
 };

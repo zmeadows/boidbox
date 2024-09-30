@@ -1,12 +1,22 @@
 #include "boid.h"
 
+#include "utils.h"
 #include "v2.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define NBOIDS 10
+
+// #define INFO(msg) \
+//     do { \
+//         fprintf(stderr, "info: %s:%d: ", __FILE__, __LINE__); \
+//         fprintf(stderr, "%s\n", msg); \
+//     } while(0)
+
+#define INFO(msg)
 
 enum RuleType {
     // RT_CENTER_OF_MASS = 0,
@@ -38,9 +48,11 @@ struct Boid {
   struct V2 vel;
 };
 
-struct PseudoBoid {
+struct Cell {
   struct V2 pos;
   struct V2 vel;
+  double sf_rgb;
+  int occupancy;
 };
 
 struct BoidSim {
@@ -49,72 +61,143 @@ struct BoidSim {
   struct Boid* boids;
   size_t nboids;
 
-  struct PseudoBoid* grid;
-  int* grid_counts;
-  size_t grid_slots;
-  int max_cell_count;
+  struct Cell* grid;
+  size_t ncells;
 };
 
-static void boidsim_init(struct BoidSim* sim, struct LEDPanel* panel, size_t nboids) {
+static void boidsim_destroy(struct BoidSim* sim) {
+    if (sim->boids != NULL) free(sim->boids);
+    if (sim->grid != NULL) free(sim->grid);
+
+    rules_init_defaults(&sim->rules);
+    sim->boids = NULL;
+    sim->nboids = 0;
+    sim->grid = NULL;
+    sim->ncells = 0;
+}
+
+static void boidsim_recompute_grid(struct BoidSim* sim, struct LEDPanel* panel) {
+    INFO("DEBUG");
+    memset(sim->grid, 0, sim->ncells * sizeof(struct Cell));
+
+    int max_occupancy = 0;
+
+    INFO("DEBUG");
+
+    for (size_t iboid = 0; iboid < sim->nboids; iboid++)
+    {
+        struct Boid* boid = sim->boids + iboid;
+        int icell = led_panel_cell_index_row_major(panel, &boid->pos);
+
+        if (icell < 0 || icell > (int) panel->npixels) {
+            // TODO: log this or print alert?
+            fprintf(stderr, "invalid cell index.");
+            led_panel_random_v2_pos(panel, &boid->pos);
+            led_panel_random_v2_vel(panel, &boid->vel);
+            icell = led_panel_cell_index_row_major(panel, &boid->pos);
+        }
+
+        struct Cell* cell = sim->grid + icell;
+
+        cell->pos = v2_add(cell->pos, boid->pos);
+        cell->vel = v2_add(cell->vel, boid->vel);
+        cell->occupancy++;
+
+        if (cell->occupancy > max_occupancy) {
+            max_occupancy = cell->occupancy;
+        }
+        INFO("DEBUG");
+    }
+
+    for (size_t icell = 0; icell < sim->ncells; icell++) {
+        struct Cell* cell = sim->grid + icell;
+        int occ = cell->occupancy;
+
+        double sf_posvel = 1.0 / occ;
+        cell->pos = v2_scale(cell->pos, sf_posvel);
+        cell->vel = v2_scale(cell->vel, sf_posvel);
+        cell->sf_rgb = (double) occ / max_occupancy;
+    }
+}
+
+static void boidsim_init(struct BoidSim* sim, struct LEDPanel* panel, size_t nboids)
+{
     memset(sim, 0, sizeof(struct BoidSim));
 
     rules_init_defaults(&sim->rules);
 
-    sim->boids = calloc(0, nboids * sizeof(struct Boid));
+    sim->boids = calloc(nboids, sizeof(struct Boid));
     sim->nboids = nboids;
 
-    sim->grid_slots = panel->uwidth * panel->uheight;
-    sim->grid = calloc(0, sim->grid_slots * sizeof(struct PseudoBoid));
-    sim->grid_counts = calloc(0, sim->grid_slots * sizeof(int));
-    sim->max_cell_count = 0;
+    sim->grid = calloc(panel->npixels, sizeof(struct Cell));
+    sim->ncells = panel->npixels;
 
     for (size_t iboid = 0; iboid < sim->nboids; iboid++) {
-        struct Boid* boid = &sim->boids[iboid];
+        struct Boid* boid = sim->boids + iboid;
         led_panel_random_v2_pos(panel, &boid->pos);
         led_panel_random_v2_vel(panel, &boid->vel);
-
-        int grid_index = led_panel_cell_index_row_major(panel, &boid->pos);
-
-        struct PseudoBoid* pb = sim->grid + grid_index;
-        pb->pos = v2_add(boid->pos, pb->pos);
-        pb->vel = v2_add(boid->vel, pb->vel);
-
-        int new_cell_count = ++sim->grid_counts[grid_index];
-        if (new_cell_count > sim->max_cell_count) {
-            sim->max_cell_count = new_cell_count;
-        }
-    }
-
-    for (size_t icell = 0; icell < sim->grid_slots; icell++) {
-        struct PseudoBoid* pb = &(sim->grid[icell]);
-        double sf = 1.0 / sim->grid_counts[icell];
-        pb->pos = v2_scale(pb->pos, sf);
-        pb->vel = v2_scale(pb->vel, sf);
     }
 }
 
-static void boidsim_destroy(struct BoidSim* sim) {
-    free(sim->boids);
-    free(sim->grid);
-    free(sim->grid_counts);
+static void boidsim_update(struct BoidSim* sim, struct LEDPanel* panel) {
+    boidsim_recompute_grid(sim, panel);
 
-    sim->boids = NULL;
-    sim->nboids = 0;
-    sim->grid = NULL;
-    sim->grid_counts = NULL;
+    INFO("DEBUG");
+
+    for (size_t iboid = 0; iboid < sim->nboids; iboid++) {
+        struct Boid* boid = sim->boids + iboid;
+        
+        struct V2 dpos = v2_scale(boid->vel, panel->dt_frame);
+
+        boid->pos = v2_add(boid->pos, dpos);
+    }
 }
 
-// static void boidsim_update(struct BoidSim* sim) {
-// }
+static void boidsim_draw(struct BoidSim* sim, struct LEDPanel* panel) {
+    for (size_t icell = 0; icell < sim->ncells; icell++)
+    {
+        struct Cell* cell = sim->grid + icell;
+        int xp = (int) cell->pos.x;
+        int yp = (int) cell->pos.y;
 
+        uint8_t c = (uint8_t) (cell->sf_rgb * 255.);
+
+        led_canvas_set_pixel(panel->canvas, xp % panel->width, yp % panel->height, c, 0, 0);
+    }
+}
 
 int boids_main(struct LEDPanel* panel)
 {
-    fprintf(stderr, "%p\n", (void*) panel);
+    INFO("DEBUG");
+
+    struct FrameTimer timer;
+    frame_timer_init(&timer);
+
+    INFO("DEBUG");
 
     struct BoidSim sim;
     boidsim_init(&sim, panel, NBOIDS);
 
+    INFO("DEBUG");
+
+    for (size_t iframe = 0; iframe < 250; iframe++)
+    {
+        boidsim_update(&sim, panel);
+        INFO("DEBUG");
+
+        led_canvas_clear(panel->canvas);
+        boidsim_draw(&sim, panel);
+        led_panel_swap_canvas_vsync(panel);
+
+        frame_timer_tick(&timer);
+
+        if (iframe % 60 == 0) {
+            fprintf(stderr, "fps = %lf\n", timer.fps);
+            fflush(stderr);
+        }
+    }
+
     boidsim_destroy(&sim);
+
     return EXIT_SUCCESS;
 }
