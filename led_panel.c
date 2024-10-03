@@ -28,11 +28,10 @@ struct LEDPanel led_panel_create()
     memset(&options, 0, sizeof(options));
     options.rows = 64;
     options.cols = 64;
-    options.chain_length = 2;
-    options.brightness = 75;
-    options.limit_refresh_rate_hz = 90;
-    options.pixel_mapper_config = "Mirror:V";
-    // options.show_refresh_rate = true;
+    options.chain_length = 4;
+    options.brightness = 100;
+    options.limit_refresh_rate_hz = 80;
+    options.pixel_mapper_config = "U-mapper;Mirror:V";
 
     struct RGBLedRuntimeOptions rt_options;
     memset(&rt_options, 0, sizeof(rt_options));

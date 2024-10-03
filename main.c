@@ -16,9 +16,9 @@ int main(void)
 
     struct LEDPanel panel = led_panel_create();
 
-    // return test_main(&panel);
-    // return streak_main(&panel);
-    int retcode =  boids_main(&panel);
+    // int retcode = test_main(&panel);
+    int retcode  = streak_main(&panel);
+    // int retcode =  boids_main(&panel);
 
     fprintf(stderr, "Finished with return code: %d\n", retcode);
 
