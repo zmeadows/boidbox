@@ -19,3 +19,5 @@ struct FrameTimer {
 
 void frame_timer_init(struct FrameTimer* timer);
 void frame_timer_tick(struct FrameTimer* timer);
+
+int max(int a, int b);

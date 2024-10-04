@@ -44,3 +44,8 @@ void frame_timer_tick(struct FrameTimer* timer)
         timer->frames = 0;
     }
 }
+
+int max(int a, int b)
+{
+    return a > b ? a : b;
+}

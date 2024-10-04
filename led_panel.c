@@ -102,8 +102,41 @@ void led_panel_swap_canvas_vsync(struct LEDPanel* panel) {
     panel->canvas = led_matrix_swap_on_vsync(panel->matrix, panel->canvas);
 }
 
-int led_panel_cell_index_row_major(struct LEDPanel* panel, struct V2* v) {
-    int row = (int) (v->y / panel->width);
-    int col = (int) (v->x);
-    return row * panel->width + col;
+int led_panel_v2_pixel_index_1d(struct LEDPanel* panel, struct V2 v) {
+    int xp = (int) v.x;
+    int yp = (int) v.y;
+    if (led_panel_is_valid_coordinate(panel, xp, yp)) {
+        return yp * panel->width + xp;
+    }
+    return -1;
+}
+
+int led_panel_v2_pixel_index_1d_nocheck(struct LEDPanel* panel, struct V2 v) {
+    int xp = (int) v.x;
+    int yp = (int) v.y;
+    return yp * panel->width + xp;
+}
+
+bool led_panel_v2_pixel_index_2d(struct LEDPanel* panel, struct V2 v, int* xp, int* yp)
+{
+    int vxp = (int) v.x;
+    int vyp = (int) v.y;
+
+    if (led_panel_is_valid_coordinate(panel, vxp, vyp)) {
+        *xp = vxp;
+        *yp = vyp;
+        return true;
+    }
+
+    return false;
+}
+
+void led_panel_v2_pixel_index_2d_nocheck(struct V2 v, int* xp, int* yp)
+{
+    *xp = (int) v.x;
+    *yp = (int) v.y;
+}
+
+bool led_panel_is_valid_coordinate(struct LEDPanel* panel, int xp, int yp) {
+    return xp >= 0 && yp >= 0 && xp < panel->width && yp < panel->height;
 }

@@ -24,4 +24,9 @@ void led_panel_random_v2_vel(struct LEDPanel* panel, struct V2* v);
 
 void led_panel_swap_canvas_vsync(struct LEDPanel* panel);
 
-int led_panel_cell_index_row_major(struct LEDPanel* panel, struct V2* v);
+int led_panel_v2_pixel_index_1d(struct LEDPanel* panel, struct V2 v); // row-major
+int led_panel_v2_pixel_index_1d_nocheck(struct LEDPanel* panel, struct V2 v);
+
+bool led_panel_v2_pixel_index_2d(struct LEDPanel* panel, struct V2 v, int* xp, int* yp);
+void led_panel_v2_pixel_index_2d_nocheck(struct V2 v, int* xp, int* yp);
+bool led_panel_is_valid_coordinate(struct LEDPanel* panel, int xp, int yp);
