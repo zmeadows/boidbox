@@ -17,19 +17,19 @@ include_directories("/home/zmeadows/rpi-rgb-led-matrix/include")
 link_directories("/home/zmeadows/rpi-rgb-led-matrix/lib")
 
 add_executable(boidbox
-    main.c
-    boid.h
-    boid.c
-    led_panel.h
-    led_panel.c
-    streak.h
-    streak.c
-    utils.h
-    utils.c
-    test.h
-    test.c
-    v2.h
-    v2.c
+    src/main.c
+    src/boid.h
+    src/boid.c
+    src/led_panel.h
+    src/led_panel.c
+    src/streak.h
+    src/streak.c
+    src/utils.h
+    src/utils.c
+    src/test.h
+    src/test.c
+    src/v2.h
+    src/v2.c
     )
 
 target_link_libraries(boidbox librgbmatrix.a stdc++ rt m pthread)
