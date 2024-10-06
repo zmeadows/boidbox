@@ -17,7 +17,7 @@ struct FrameTimer {
     double dt_last;
 };
 
-void frame_timer_init(struct FrameTimer* timer);
+struct FrameTimer frame_timer_create(void);
 void frame_timer_tick(struct FrameTimer* timer);
 
 int max(int a, int b);

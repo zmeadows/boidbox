@@ -65,8 +65,7 @@ static void streak_draw(struct Streak* streak, struct LEDPanel* panel)
 
 int streak_main(struct LEDPanel* panel)
 {
-    struct FrameTimer timer;
-    frame_timer_init(&timer);
+    struct FrameTimer timer = frame_timer_create();
 
     size_t streak_count = 0;
     struct Streak streaks[MAX_STREAK_COUNT];

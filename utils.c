@@ -20,11 +20,14 @@ double clamp(double x, double min, double max)
     }
 }
 
-void frame_timer_init(struct FrameTimer* timer)
+struct FrameTimer frame_timer_create(void)
 {
-    memset(timer, 0, sizeof(struct FrameTimer));
+    struct FrameTimer timer;
+    memset(&timer, 0, sizeof(struct FrameTimer));
 
-    gettimeofday(&timer->t0, NULL);
+    gettimeofday(&timer.t0, NULL);
+
+    return timer;
 }
 
 void frame_timer_tick(struct FrameTimer* timer)

@@ -18,10 +18,10 @@
 
 enum RuleType {
     RT_CENTER_OF_MASS = 0,
-    RT_DENSITY,
-    RT_CONFINE,
     RT_AVERAGE_VELOCITY,
+    RT_DENSITY,
     RT_GRAVITY,
+    RT_CONFINE,
     RT_RANDOM_NOISE,
     RT_MAX_FORCE,
     RT_MAX_VELOCITY,
@@ -33,7 +33,7 @@ struct Rules {
     bool enabled[RT_COUNT];
 };
 
-static void rules_init_defaults(struct Rules* rules) {
+static void rules_set_defaults(struct Rules* rules) {
     memset(rules, 0, sizeof(struct Rules));
     for (size_t i = 0; i < RT_COUNT; i++) {
         rules->strength[i] = 1.;
@@ -70,7 +70,7 @@ static void boidsim_destroy(struct BoidSim* sim) {
     if (sim->boids != NULL) free(sim->boids);
     if (sim->grid != NULL) free(sim->grid);
 
-    rules_init_defaults(&sim->rules);
+    rules_set_defaults(&sim->rules);
     sim->boids = NULL;
     sim->nboids = 0;
     sim->grid = NULL;
@@ -119,29 +119,32 @@ static void boidsim_recompute_grid(struct BoidSim* sim, struct LEDPanel* panel) 
     }
 }
 
-static void boidsim_init(struct BoidSim* sim, struct LEDPanel* panel, size_t nboids)
+static struct BoidSim boidsim_create(struct LEDPanel* panel, size_t nboids)
 {
-    memset(sim, 0, sizeof(struct BoidSim));
+    struct BoidSim sim;
+    memset(&sim, 0, sizeof(struct BoidSim));
 
-    rules_init_defaults(&sim->rules);
+    rules_set_defaults(&sim.rules);
 
-    sim->boids = calloc(nboids, sizeof(struct Boid));
-    sim->nboids = nboids;
+    sim.boids = calloc(nboids, sizeof(struct Boid));
+    sim.nboids = nboids;
 
-    sim->grid = calloc(panel->npixels, sizeof(struct Cell));
-    sim->ncells = panel->npixels;
+    sim.grid = calloc(panel->npixels, sizeof(struct Cell));
+    sim.ncells = panel->npixels;
 
-    for (size_t iboid = 0; iboid < sim->nboids; iboid++) {
-        struct Boid* boid = sim->boids + iboid;
+    for (size_t iboid = 0; iboid < sim.nboids; iboid++) {
+        struct Boid* boid = sim.boids + iboid;
         led_panel_random_v2_pos(panel, &boid->pos);
         led_panel_random_v2_vel(panel, &boid->vel);
     }
 
-    sim->effect_radius = 2;
+    sim.effect_radius = 2;
 
-    sim->boids_recreated = 0;
+    sim.boids_recreated = 0;
 
-    boidsim_recompute_grid(sim, panel);
+    boidsim_recompute_grid(&sim, panel);
+
+    return sim;
 }
 
 static void boid_update(struct BoidSim* sim, struct Boid* boid, struct LEDPanel* panel)
@@ -186,9 +189,15 @@ static void boid_update(struct BoidSim* sim, struct Boid* boid, struct LEDPanel*
     struct V2 dv_boid = {0., 0.};
 
     if (weight_sum > 0.) {
-        double sf = 1. / (double) weight_sum;
-        struct V2 pos_mean = v2_scale(pos_sum, sf);
-        struct V2 vel_mean = v2_scale(vel_sum, sf);
+        double inv_weight = 1. / (double) weight_sum;
+        struct V2 pos_mean = v2_scale(pos_sum, inv_weight);
+        struct V2 vel_mean = v2_scale(vel_sum, inv_weight);
+
+        if (sim->rules.enabled[RT_CENTER_OF_MASS]) {
+            double sf_com = sim->rules.strength[RT_CENTER_OF_MASS];
+            struct V2 dv_com = v2_scale(v2_sub(pos_mean, boid->pos), sf_com);
+            dv_boid = v2_add(dv_boid, dv_com);
+        }
 
         if (sim->rules.enabled[RT_AVERAGE_VELOCITY]) {
             double sf_avel = sim->rules.strength[RT_AVERAGE_VELOCITY];
@@ -202,22 +211,23 @@ static void boid_update(struct BoidSim* sim, struct Boid* boid, struct LEDPanel*
             dv_boid = v2_add(dv_boid, dv_den);
         }
 
-        if (sim->rules.enabled[RT_CENTER_OF_MASS]) {
-            double sf_com = sim->rules.strength[RT_CENTER_OF_MASS];
-            struct V2 dv_com = v2_scale(v2_sub(pos_mean, boid->pos), sf_com);
-            dv_boid = v2_add(dv_boid, dv_com);
-        }
     }
 
     if (sim->rules.enabled[RT_GRAVITY]) {
         dv_boid.y -= sim->rules.strength[RT_GRAVITY];
     }
 
+    if (sim->rules.enabled[RT_CONFINE]) {
+        // TODO
+    }
+
+    if (sim->rules.enabled[RT_RANDOM_NOISE]) {
+        // TODO
+    }
+
     if (sim->rules.enabled[RT_MAX_FORCE]) {
         dv_boid = v2_clamp(dv_boid, sim->rules.strength[RT_MAX_FORCE]);
     }
-
-    // done
 
     boid->vel = v2_add(boid->vel, dv_boid);
 
@@ -252,11 +262,8 @@ static void boidsim_draw(struct BoidSim* sim, struct LEDPanel* panel) {
 
 int boids_main(struct LEDPanel* panel)
 {
-    struct FrameTimer timer;
-    frame_timer_init(&timer);
-
-    struct BoidSim sim;
-    boidsim_init(&sim, panel, NBOIDS);
+    struct BoidSim sim = boidsim_create(panel, NBOIDS);
+    struct FrameTimer timer = frame_timer_create();
 
     for (size_t iframe = 0; iframe < 250; iframe++)
     {
